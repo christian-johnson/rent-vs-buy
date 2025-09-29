@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rent vs. Buy Calculator</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #007bff;
+      --secondary-color: #6c757d;
+      --buy-color-hex: #28a745;
+      --rent-color-hex: #dc3545;
+      --bg-light: #f8f9fa;
+      --card-bg: #ffffff;
+      --text-color: #343a40;
+      --border-color: #dee2e6;
+      --shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0; padding: 20px;
+      background-color: var(--bg-light);
+      color: var(--text-color);
+      display: flex; justify-content: center;
+    }
+    .container {
+      width: 100%; max-width: 1200px;
+    }
+    h1 {
+      text-align: center; color: var(--text-color);
+      font-weight: 700; margin-bottom: 30px;
+    }
+    .card {
+      background: var(--card-bg); padding: 25px;
+      border-radius: 12px; box-shadow: var(--shadow);
+      margin-bottom: 25px;
+    }
+    form {
+      display: flex; flex-direction: column; gap: 30px;
+    }
+    .form-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+    .form-group h3 {
+      grid-column: 1 / -1; margin: 0; font-size: 1.2rem;
+    }
+    .group-description {
+      grid-column: 1 / -1; margin: -15px 0 5px 0;
+      font-size: 0.9rem; color: var(--secondary-color); font-weight: 400;
+    }
+    label {
+      display: flex; flex-direction: column;
+      font-size: 14px; font-weight: 600;
+    }
+    input {
+      padding: 10px; font-size: 14px; margin-top: 5px;
+      border: 1px solid var(--border-color); border-radius: 6px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus {
+      outline: none; border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+    }
+    .button-wrapper {
+        display: flex; justify-content: center; margin-top: 10px;
+    }
+    .scenario-toggle-wrapper {
+        display: flex; gap: 15px; justify-content: center;
+        border-top: 1px solid var(--border-color);
+        padding-top: 25px;
+    }
+    button {
+      padding: 12px 25px; background: var(--primary-color); color: white;
+      border: none; border-radius: 6px; font-size: 18px;
+      font-weight: 600; cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s, opacity 0.2s;
+    }
+    button.secondary {
+        background-color: var(--secondary-color); font-size: 14px;
+        padding: 10px 20px;
+    }
+    button.remove-btn {
+        background-color: var(--rent-color-hex); font-size: 12px;
+        padding: 6px 12px;
+        justify-self: end;
+        grid-column: 3;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    button.primary:hover:not(:disabled) { background: #0056b3; }
+    button.secondary:hover:not(:disabled) { background: #5a6268; }
+    button.remove-btn:hover:not(:disabled) { background: #c82333; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    #result {
+      font-size: 1.1rem; text-align: center;
+      font-weight: 600; line-height: 1.6;
+    }
+    #chart-container {
+        position: relative; min-height: 500px;
+    }
+    .hidden { display: none !important; }
+    .optional-fields-container {
+      grid-column: 1 / -1;
+    }
+    .optional-fields {
+        background-color: #f8f9fa;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 20px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-top: 10px;
+        align-items: end;
+    }
+    .optional-fields h3 {
+        grid-column: 1 / -1;
+        margin: 0 0 10px 0;
+        font-size: 16px;
+        color: var(--primary-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Rent vs. Buy Calculator 🏠</h1>
+    
+    <div class="card">
+      <form id="input-form">
+        <div class="form-group">
+          <h3>Property & Loan Details</h3>
+          <p class="group-description">Enter specifics of the property you are considering and the loan you expect to get.</p>
+          <label>Home Price ($)<input type="number" name="home_price" value="500000" required></label>
+          <label>Down Payment (%)<input type="number" name="down_payment_pct" value="20" step="0.1" required></label>
+          <label>Mortgage Rate (%)<input type="number" name="initial_rate" value="6.5" step="0.1" required></label>
+          <label>Closing Costs ($)<input type="number" name="closing_costs" value="12000" required></label>
+          <label>HOA Fees ($/mo)<input type="number" name="hoa_fees" value="150" required></label>
+        </div>
+        
+        <div class="form-group">
+          <h3>Market Assumptions</h3>
+          <p class="group-description">Estimate how factors like appreciation, rent increases, and investments will change over time.</p>
+          <label>Current Rent ($/mo)<input type="number" name="current_rent" value="2500" required></label>
+          <label>Home Growth (%/yr)<input type="number" name="home_price_growth" value="3.5" step="0.1" required></label>
+          <label>Rent Growth (%/yr)<input type="number" name="rent_growth" value="3.0" step="0.1" required></label>
+          <label>Stock Growth (%/yr)<input type="number" name="stock_growth" value="8.0" step="0.1" required></label>
+          <label>Property Tax (%/yr)<input type="number" name="property_tax_rate" value="1.2" step="0.1" required></label>
+          <label>Insurance (%/yr)<input type="number" name="insurance_rate" value="0.5" step="0.1" required></label>
+        </div>
+
+        <div id="optional-scenarios-container"></div>
+        
+        <div class="scenario-toggle-wrapper">
+          <button type="button" class="secondary add-scenario-btn" data-widget="refinance">Add Refinancing</button>
+          <button type="button" class="secondary add-scenario-btn" data-widget="rental-upgrade">Add Rental Upgrade</button>
+        </div>
+        <div class="button-wrapper">
+          <button type="submit" id="submit-btn" class="primary">Run Analysis</button>
+        </div>
+      </form>
+    </div>
+    
+    <div class="card" id="result"></div>
+    
+    <div class="card" id="chart-container">
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    let pyodide;
+    let chart;
+    const submitBtn = document.getElementById("submit-btn");
+    const resultDiv = document.getElementById("result");
+    const inputForm = document.getElementById("input-form");
+
+    function setupScenarioWidgets() {
+        const scenariosContainer = document.getElementById('optional-scenarios-container');
+        const widgets = {
+            refinance: {
+                html: `
+                    <div class="optional-fields">
+                        <h3>Mortgage Refinancing Details</h3>
+                        <label>Refinance Year (e.g., 5)<input type="number" name="refinance_year" value="5" min="1"></label>
+                        <label>New Rate (%)<input type="number" name="refinance_rate" value="5.0" step="0.1"></label>
+                        <button type="button" class="remove-btn" data-widget="refinance">Remove</button>
+                        <label>Refinance Costs ($)<input type="number" name="refinance_costs" value="5000"></label>
+                    </div>`,
+                element: null
+            },
+            'rental-upgrade': {
+                html: `
+                    <div class="optional-fields">
+                        <h3>Rental Upgrade Details</h3>
+                        <label>Move to Larger Rental in Year<input type="number" name="move_to_larger_year" value="7" min="1"></label>
+                        <label>New Rent Multiplier (e.g., 1.5)<input type="number" name="larger_rent_multiplier" value="1.5" step="0.1"></label>
+                        <button type="button" class="remove-btn" data-widget="rental-upgrade">Remove</button>
+                    </div>`,
+                element: null
+            }
+        };
+
+        inputForm.addEventListener('click', (event) => {
+            const target = event.target;
+            const widgetName = target.dataset.widget;
+
+            if (target.classList.contains('add-scenario-btn')) {
+                target.classList.add('hidden'); // Hide the "Add" button
+                if (!widgets[widgetName].element) {
+                    scenariosContainer.insertAdjacentHTML('beforeend', widgets[widgetName].html);
+                    widgets[widgetName].element = scenariosContainer.querySelector(`[data-widget="${widgetName}"].remove-btn`).closest('.optional-fields');
+                }
+                widgets[widgetName].element.classList.remove('hidden');
+            }
+
+            if (target.classList.contains('remove-btn')) {
+                const addBtn = document.querySelector(`.add-scenario-btn[data-widget="${widgetName}"]`);
+                addBtn.classList.remove('hidden'); // Show the "Add" button again
+                widgets[widgetName].element.remove();
+                widgets[widgetName].element = null;
+            }
+        });
+    }
+
+    async function main() {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "🐍 Loading Python...";
+      resultDiv.innerHTML = '<span class="loading">Warming up the calculators... Please wait.</span>';
+      
+      try {
+        pyodide = await loadPyodide();
+        const mainPy = await (await fetch("main.py")).text();
+        pyodide.FS.writeFile("main.py", mainPy);
+        pyodide.pyimport("main");
+        
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Run Analysis";
+        setupScenarioWidgets();
+        await handleFormSubmit();
+      } catch (error) {
+        console.error("Pyodide initialization error:", error);
+        submitBtn.textContent = "Error - Please Refresh";
+      }
+    }
+
+    async function runAnalysis(params) {
+      const paramsJson = JSON.stringify(params);
+      const pythonCode = `
+import main, json
+params_dict = json.loads('${paramsJson}')
+result = main.rent_vs_buy_analysis(params_dict)
+json.dumps(result)`;
+      const resultJson = await pyodide.runPythonAsync(pythonCode);
+      return JSON.parse(resultJson);
+    }
+
+    async function handleFormSubmit(event) {
+        if (event) event.preventDefault();
+        submitBtn.disabled = true;
+        resultDiv.innerHTML = '<span class="loading">📈 Calculating scenarios...</span>';
+      
+        try {
+            const formData = new FormData(inputForm);
+            const params = {};
+            for (const [key, value] of formData.entries()) {
+                params[key] = parseFloat(value) || 0;
+            }
+        
+            const result = await runAnalysis(params);
+
+            const finalBuy = result.final_buy_net_worth;
+            const finalRent = result.final_rent_net_worth;
+
+            resultDiv.innerHTML = `
+                After 30 years, your final net worth would be:<br>
+                <strong style="color: var(--buy-color-hex);">Buying: $${finalBuy.toLocaleString(undefined, {maximumFractionDigits: 0})}</strong><br>
+                <strong style="color: var(--rent-color-hex);">Renting: $${finalRent.toLocaleString(undefined, {maximumFractionDigits: 0})}</strong>
+            `;
+
+            const ctx = document.getElementById("chart").getContext("2d");
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: result.years,
+                    datasets: [{
+                        label: "Buy Net Worth", data: result.buy_net_worth,
+                        borderColor: "#28a745", // Fixed Hex Color
+                        fill: false,
+                        tension: 0.2
+                    }, {
+                        label: "Rent Net Worth", data: result.rent_net_worth,
+                        borderColor: "#dc3545", // Fixed Hex Color
+                        fill: false,
+                        tension: 0.2
+                    }],
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: { title: { display: true, text: "Years", font: { weight: '600' } } },
+                        y: { 
+                            title: { display: true, text: "Net Worth ($)", font: { weight: '600' } },
+                            ticks: { callback: value => '$' + value.toLocaleString() }
+                        },
+                    },
+                },
+            });
+        } catch (error) {
+            console.error("Error running analysis:", error);
+            resultDiv.innerHTML = `<span style="color: var(--rent-color-hex);">An error occurred: ${error.message}</span>`;
+        } finally {
+            submitBtn.disabled = false;
+        }
+    }
+
+    inputForm.addEventListener("submit", handleFormSubmit);
+    main();
+  </script>
+</body>
+</html>

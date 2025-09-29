@@ -13,12 +13,12 @@
     :root {
       --primary-color: #007bff;
       --secondary-color: #6c757d;
-      --buy-color-hex: #28a745;
-      --rent-color-hex: #dc3545;
-      --bg-light: #f8f9fa;
-      --card-bg: #ffffff;
-      --text-color: #343a40;
-      --border-color: #dee2e6;
+      --buy-color-hex: #907aa9;
+      --rent-color-hex: #ea9d34;
+      --bg-light:#f2e9e1;
+      --card-bg: #fffaf3;
+      --text-color: #575279;
+      --border-color: #797593;
       --shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
     }
     body {
@@ -59,6 +59,13 @@
       display: flex; flex-direction: column;
       font-size: 14px; font-weight: 600;
     }
+    /* Style for the down payment percentage span */
+    #dp-percent-display {
+      font-weight: 400;
+      color: var(--secondary-color);
+      font-size: 0.85em;
+      margin-left: 5px;
+    }
     input {
       padding: 10px; font-size: 14px; margin-top: 5px;
       border: 1px solid var(--border-color); border-radius: 6px;
@@ -93,10 +100,14 @@
         grid-column: 3;
     }
     button:hover:not(:disabled) { transform: translateY(-1px); }
-    button.primary:hover:not(:disabled) { background: #0056b3; }
-    button.secondary:hover:not(:disabled) { background: #5a6268; }
-    button.remove-btn:hover:not(:disabled) { background: #c82333; }
     button:disabled { background: #ccc; cursor: not-allowed; }
+    #dp-percent-display {
+    font-weight: 400;
+    color: var(--secondary-color);
+    font-size: 0.85em;
+    /* Add this line to create space */
+    margin-top: 6px; 
+    }
     #result {
       font-size: 1.1rem; text-align: center;
       font-weight: 600; line-height: 1.6;
@@ -120,11 +131,25 @@
         align-items: end;
     }
     .optional-fields h3 {
-        grid-column: 1 / -1;
-        margin: 0 0 10px 0;
-        font-size: 16px;
-        color: var(--primary-color);
+        grid-column: 1 / -1; margin: 0 0 10px 0;
+        font-size: 16px; color: var(--primary-color);
     }
+    /* Styles for the details table */
+    #details-card { visibility: hidden; }
+    #details-card summary { cursor: pointer; font-weight: 600; }
+    #details-table-container { 
+        margin-top: 15px; max-height: 500px; overflow-y: auto; 
+    }
+    table {
+        width: 100%; border-collapse: collapse; font-size: 14px;
+    }
+    th, td {
+        padding: 8px 12px; border: 1px solid var(--border-color); text-align: right;
+    }
+    th {
+        background-color: #f8f9fa; font-weight: 600; position: sticky; top: 0;
+    }
+    td:first-child, th:first-child { text-align: center; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -136,10 +161,14 @@
         <div class="form-group">
           <h3>Property & Loan Details</h3>
           <p class="group-description">Enter specifics of the property you are considering and the loan you expect to get.</p>
-          <label>Home Price ($)<input type="number" name="home_price" value="500000" required></label>
-          <label>Down Payment (%)<input type="number" name="down_payment_pct" value="20" step="0.1" required></label>
+          <label>Home Price ($)<input type="number" name="home_price" id="home_price" value="500000" required></label>
+          <label>
+            Down Payment ($)
+            <input type="number" name="down_payment_amount" id="down_payment_amount" value="100000" required>
+            <span id="dp-percent-display"></span>
+          </label>
           <label>Mortgage Rate (%)<input type="number" name="initial_rate" value="6.5" step="0.1" required></label>
-          <label>Closing Costs ($)<input type="number" name="closing_costs" value="12000" required></label>
+          <label>Closing Costs (%)<input type="number" name="closing_costs_pct" value="2.5" step="0.1" required></label>
           <label>HOA Fees ($/mo)<input type="number" name="hoa_fees" value="150" required></label>
         </div>
         
@@ -171,6 +200,13 @@
     <div class="card" id="chart-container">
       <canvas id="chart"></canvas>
     </div>
+    
+    <div class="card" id="details-card">
+        <details>
+            <summary>View Yearly Breakdown</summary>
+            <div id="details-table-container"></div>
+        </details>
+    </div>
   </div>
 
   <script type="text/javascript">
@@ -179,98 +215,144 @@
     const submitBtn = document.getElementById("submit-btn");
     const resultDiv = document.getElementById("result");
     const inputForm = document.getElementById("input-form");
+    const homePriceInput = document.getElementById('home_price');
+    const downPaymentAmountInput = document.getElementById('down_payment_amount');
+    const dpPercentDisplay = document.getElementById('dp-percent-display');
 
+    // --- NEW: Function to update the down payment percentage display ---
+    function updateDownPaymentPercent() {
+        const price = parseFloat(homePriceInput.value) || 0;
+        const amount = parseFloat(downPaymentAmountInput.value) || 0;
+        if (price > 0 && amount > 0) {
+            const percent = (amount / price) * 100;
+            dpPercentDisplay.textContent = `(${percent.toFixed(1)}%)`;
+        } else {
+            dpPercentDisplay.textContent = '';
+        }
+    }
+    
+    // --- NEW: Function to render the details table ---
+    function renderDetailsTable(details) {
+        const container = document.getElementById('details-table-container');
+        const detailsCard = document.getElementById('details-card');
+        if (!details || details.length === 0) {
+            detailsCard.style.visibility = 'hidden';
+            return;
+        }
+
+        const toUSD = (num) => `$${Math.round(num).toLocaleString()}`;
+        
+        let tableHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Year</th>
+                        <th>Home Value</th>
+                        <th>Home Equity</th>
+                        <th>Total Buy Outlay</th>
+                        <th>Total Rent Paid</th>
+                        <th>Equity (Buy)</th>
+                        <th>Equity (Rent)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        details.forEach(row => {
+            const totalBuyOutlay = row.principal_paid + row.interest_paid + row.tax_ins_paid + row.hoa_paid;
+            tableHTML += `
+                <tr>
+                    <td>${row.year-1}</td>
+                    <td>${toUSD(row.home_value)}</td>
+                    <td>${toUSD(row.home_equity)}</td>
+                    <td>${toUSD(totalBuyOutlay)}</td>
+                    <td>${toUSD(row.rent_paid)}</td>
+                    <td>${toUSD(row.buy_net_worth)}</td>
+                    <td>${toUSD(row.rent_net_worth)}</td>
+                </tr>
+            `;
+        });
+
+        tableHTML += '</tbody></table>';
+        container.innerHTML = tableHTML;
+        detailsCard.style.visibility = 'visible';
+    }
+
+    function setupScenarioWidgets() { /* ... function content remains the same ... */ }
+
+    async function main() {
+      // ... initialization logic remains the same ...
+      setupScenarioWidgets();
+      // NEW: Set up listeners for down payment calculation
+      homePriceInput.addEventListener('input', updateDownPaymentPercent);
+      downPaymentAmountInput.addEventListener('input', updateDownPaymentPercent);
+      updateDownPaymentPercent(); // Initial call
+      await handleFormSubmit();
+    }
+    
+    // ... setupScenarioWidgets and runAnalysis functions remain the same ...
+    
     function setupScenarioWidgets() {
         const scenariosContainer = document.getElementById('optional-scenarios-container');
         const widgets = {
             refinance: {
-                html: `
-                    <div class="optional-fields">
-                        <h3>Mortgage Refinancing Details</h3>
-                        <label>Refinance Year (e.g., 5)<input type="number" name="refinance_year" value="5" min="1"></label>
-                        <label>New Rate (%)<input type="number" name="refinance_rate" value="5.0" step="0.1"></label>
-                        <button type="button" class="remove-btn" data-widget="refinance">Remove</button>
-                        <label>Refinance Costs ($)<input type="number" name="refinance_costs" value="5000"></label>
-                    </div>`,
+                html: `<div class="optional-fields-container"><div class="optional-fields"><h3>Mortgage Refinancing Details</h3><label>Refinance Year (e.g., 5)<input type="number" name="refinance_year" value="5" min="1"></label><label>New Rate (%)<input type="number" name="refinance_rate" value="5.0" step="0.1"></label><button type="button" class="remove-btn" data-widget="refinance">Remove</button><label>Refinance Costs ($)<input type="number" name="refinance_costs" value="5000"></label></div></div>`,
                 element: null
             },
             'rental-upgrade': {
-                html: `
-                    <div class="optional-fields">
-                        <h3>Rental Upgrade Details</h3>
-                        <label>Move to Larger Rental in Year<input type="number" name="move_to_larger_year" value="7" min="1"></label>
-                        <label>New Rent Multiplier (e.g., 1.5)<input type="number" name="larger_rent_multiplier" value="1.5" step="0.1"></label>
-                        <button type="button" class="remove-btn" data-widget="rental-upgrade">Remove</button>
-                    </div>`,
+                html: `<div class="optional-fields-container"><div class="optional-fields"><h3>Rental Upgrade Details</h3><label>Move to Larger Rental in Year<input type="number" name="move_to_larger_year" value="7" min="1"></label><label>New Rent in Today's $ ($/mo)<input type="number" name="new_rent_today" value="4000"></label><button type="button" class="remove-btn" data-widget="rental-upgrade">Remove</button></div></div>`,
                 element: null
             }
         };
-
         inputForm.addEventListener('click', (event) => {
             const target = event.target;
             const widgetName = target.dataset.widget;
-
             if (target.classList.contains('add-scenario-btn')) {
-                target.classList.add('hidden'); // Hide the "Add" button
+                target.classList.add('hidden');
                 if (!widgets[widgetName].element) {
                     scenariosContainer.insertAdjacentHTML('beforeend', widgets[widgetName].html);
-                    widgets[widgetName].element = scenariosContainer.querySelector(`[data-widget="${widgetName}"].remove-btn`).closest('.optional-fields');
+                    widgets[widgetName].element = scenariosContainer.querySelector(`[data-widget="${widgetName}"].remove-btn`).closest('.optional-fields-container');
                 }
                 widgets[widgetName].element.classList.remove('hidden');
             }
-
             if (target.classList.contains('remove-btn')) {
                 const addBtn = document.querySelector(`.add-scenario-btn[data-widget="${widgetName}"]`);
-                addBtn.classList.remove('hidden'); // Show the "Add" button again
+                addBtn.classList.remove('hidden');
                 widgets[widgetName].element.remove();
                 widgets[widgetName].element = null;
             }
         });
     }
-
-    async function main() {
-      submitBtn.disabled = true;
-      submitBtn.textContent = "🐍 Loading Python...";
-      resultDiv.innerHTML = '<span class="loading">Warming up the calculators... Please wait.</span>';
-      
-      try {
-        pyodide = await loadPyodide();
-        const mainPy = await (await fetch("main.py")).text();
-        pyodide.FS.writeFile("main.py", mainPy);
-        pyodide.pyimport("main");
-        
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Run Analysis";
-        setupScenarioWidgets();
-        await handleFormSubmit();
-      } catch (error) {
-        console.error("Pyodide initialization error:", error);
-        submitBtn.textContent = "Error - Please Refresh";
-      }
-    }
-
+    
     async function runAnalysis(params) {
-      const paramsJson = JSON.stringify(params);
-      const pythonCode = `
+        const paramsJson = JSON.stringify(params);
+        const pythonCode = `
 import main, json
 params_dict = json.loads('${paramsJson}')
 result = main.rent_vs_buy_analysis(params_dict)
 json.dumps(result)`;
-      const resultJson = await pyodide.runPythonAsync(pythonCode);
-      return JSON.parse(resultJson);
+        const resultJson = await pyodide.runPythonAsync(pythonCode);
+        return JSON.parse(resultJson);
     }
 
     async function handleFormSubmit(event) {
         if (event) event.preventDefault();
         submitBtn.disabled = true;
-        resultDiv.innerHTML = '<span class="loading">📈 Calculating scenarios...</span>';
+        resultDiv.innerHTML = '<span class="loading">Calculating scenarios...</span>';
       
         try {
             const formData = new FormData(inputForm);
             const params = {};
             for (const [key, value] of formData.entries()) {
-                params[key] = parseFloat(value) || 0;
+                // Exclude the dollar amount for down payment from direct inclusion
+                if (key !== 'down_payment_amount') {
+                    params[key] = parseFloat(value) || 0;
+                }
             }
+            // NEW: Manually calculate and add down_payment_pct
+            const price = parseFloat(homePriceInput.value) || 0;
+            const amount = parseFloat(downPaymentAmountInput.value) || 0;
+            params['down_payment_pct'] = (price > 0) ? (amount / price) * 100 : 0;
         
             const result = await runAnalysis(params);
 
@@ -278,7 +360,7 @@ json.dumps(result)`;
             const finalRent = result.final_rent_net_worth;
 
             resultDiv.innerHTML = `
-                After 30 years, your final net worth would be:<br>
+                After 30 years, your final equity would be:<br>
                 <strong style="color: var(--buy-color-hex);">Buying: $${finalBuy.toLocaleString(undefined, {maximumFractionDigits: 0})}</strong><br>
                 <strong style="color: var(--rent-color-hex);">Renting: $${finalRent.toLocaleString(undefined, {maximumFractionDigits: 0})}</strong>
             `;
@@ -290,32 +372,53 @@ json.dumps(result)`;
                 data: {
                     labels: result.years,
                     datasets: [{
-                        label: "Buy Net Worth", data: result.buy_net_worth,
-                        borderColor: "#28a745", // Fixed Hex Color
-                        fill: false,
-                        tension: 0.2
+                        label: "Equity (Buy)", data: result.buy_net_worth,
+                        borderColor: "#907aa9", fill: false, tension: 0.2
                     }, {
-                        label: "Rent Net Worth", data: result.rent_net_worth,
-                        borderColor: "#dc3545", // Fixed Hex Color
-                        fill: false,
-                        tension: 0.2
+                        label: "Equity (Rent)", data: result.rent_net_worth,
+                        borderColor: "#ea9d34", fill: false, tension: 0.2
                     }],
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false,
+                    interaction: { mode: 'index', intersect: false },
+                    // UPDATED: Chart.js plugins for tooltip customization
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                title: (tooltipItems) => {
+                                    const year = tooltipItems[0].label;
+                                    return year > 0 ? `Year ${year}` : 'Starting Point';
+                                },
+                                footer: (tooltipItems) => {
+                                    const buyWorth = tooltipItems[0].parsed.y;
+                                    const rentWorth = tooltipItems[1].parsed.y;
+                                    const delta = buyWorth - rentWorth;
+                                    const formattedDelta = Math.abs(delta).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+                                    
+                                    if (delta > 0) {
+                                        return `Buying is ahead by ${formattedDelta}`;
+                                    } else if (delta < 0) {
+                                        return `Renting is ahead by ${formattedDelta}`;
+                                    }
+                                    return 'Break-even point';
+                                }
+                            }
+                        }
                     },
                     scales: {
-                        x: { title: { display: true, text: "Years", font: { weight: '600' } } },
+                        x: { title: { display: true, text: "Year", font: { weight: '600' } } },
                         y: { 
-                            title: { display: true, text: "Net Worth ($)", font: { weight: '600' } },
+                            title: { display: true, text: "Net Worth", font: { weight: '600' } },
                             ticks: { callback: value => '$' + value.toLocaleString() }
                         },
                     },
                 },
             });
+
+            // NEW: Render the details table with the new data
+            renderDetailsTable(result.yearly_details);
+
         } catch (error) {
             console.error("Error running analysis:", error);
             resultDiv.innerHTML = `<span style="color: var(--rent-color-hex);">An error occurred: ${error.message}</span>`;
@@ -323,9 +426,32 @@ json.dumps(result)`;
             submitBtn.disabled = false;
         }
     }
-
+    
+    // ... main() call and form listener remain the same ...
+    // Note: A simplified main() is shown above for brevity.
+    async function fullMain() {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "🐍 Loading Python...";
+        resultDiv.innerHTML = '<span class="loading">Warming up the calculators... Please wait.</span>';
+        try {
+            pyodide = await loadPyodide();
+            const mainPy = await (await fetch("main.py")).text();
+            pyodide.FS.writeFile("main.py", mainPy);
+            pyodide.pyimport("main");
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Run Analysis";
+            setupScenarioWidgets();
+            homePriceInput.addEventListener('input', updateDownPaymentPercent);
+            downPaymentAmountInput.addEventListener('input', updateDownPaymentPercent);
+            updateDownPaymentPercent();
+            await handleFormSubmit();
+        } catch (error) {
+            console.error("Pyodide initialization error:", error);
+            submitBtn.textContent = "Error - Please Refresh";
+        }
+    }
     inputForm.addEventListener("submit", handleFormSubmit);
-    main();
+    fullMain();
   </script>
 </body>
 </html>

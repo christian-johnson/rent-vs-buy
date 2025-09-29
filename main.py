@@ -3,7 +3,7 @@
 def calculate_monthly_payment(principal, rate, years):
     """Calculates the monthly mortgage payment."""
     if years <= 0:
-        return principal  # Should be paid off
+        return principal
     if rate == 0:
         return principal / (years * 12)
     monthly_rate = rate / 12
@@ -22,15 +22,12 @@ def calculate_remaining_balance(original_principal, rate, years, months_paid):
     monthly_rate = rate / 12
     monthly_payment = calculate_monthly_payment(
         original_principal, rate, years)
-    balance = original_principal * ((1 + monthly_rate)**months_paid) - \
-        monthly_payment * \
-        (((1 + monthly_rate)**months_paid - 1) / monthly_rate)
-    return max(0, balance)
+    return original_principal*(1+monthly_rate)**months_paid - monthly_payment*((1+monthly_rate)**months_paid-1)/monthly_rate
 
 
 def rent_vs_buy_analysis(params):
     """
-    Analyzes renting vs. buying, now with optional refinancing and rental upgrade scenarios.
+    Analyzes renting vs. buying, now with detailed yearly data tracking.
     """
     # --- 1. SETUP AND PARAMETER EXTRACTION ---
     years_to_simulate = 30
@@ -47,14 +44,15 @@ def rent_vs_buy_analysis(params):
     hoa_fees = params.get('hoa_fees', 0)
     property_tax_rate = params.get('property_tax_rate', 0) / 100
     insurance_rate = params.get('insurance_rate', 0) / 100
-    closing_costs = params.get('closing_costs', 0)
+    closing_costs_pct = params.get('closing_costs_pct', 0) / 100
+    closing_costs = home_price * closing_costs_pct
 
     # Optional Scenario Parameters
     refinance_year = int(params.get('refinance_year', 0))
     refinance_rate = params.get('refinance_rate', 0) / 100
     refinance_costs = params.get('refinance_costs', 0)
     move_to_larger_year = int(params.get('move_to_larger_year', 0))
-    larger_rent_multiplier = params.get('larger_rent_multiplier', 1.0)
+    new_rent_today = params.get('new_rent_today', 0)
 
     # --- 2. INITIALIZE FINANCIAL STATE (YEAR 0) ---
     down_payment = home_price * down_payment_pct
@@ -72,9 +70,18 @@ def rent_vs_buy_analysis(params):
                             current_loan_balance + buy_investments]
     rent_net_worth_yearly = [rent_investments]
 
-    # --- 3. MONTH-BY-MONTH SIMULATION ---
+    # Store some yearly summary data
+    yearly_details = []
+
+    # Keep track of user options
     refinanced = False
     moved_to_larger = False
+
+    acc_principal = 0
+    acc_interest = 0
+    acc_tax_ins = 0
+    acc_hoa = 0
+    acc_rent = 0
 
     for month in range(1, months + 1):
         year = month // 12
@@ -82,15 +89,11 @@ def rent_vs_buy_analysis(params):
         # --- Handle Optional Scenarios ---
         if refinance_year > 0 and year >= refinance_year and not refinanced:
             refinanced = True
-            # Calculate balance at the point of refinancing
             remaining_balance = calculate_remaining_balance(
                 initial_loan_amount, initial_rate, 30, month)
-            # Subtract refinance costs from buyer's investments
             buy_investments -= refinance_costs
-            # Set new loan terms
             current_loan_balance = remaining_balance
             current_rate = refinance_rate
-            # Typically a new 30 or 15 year loan, simplifying to remaining term
             loan_term_years = 30 - year
             current_monthly_payment = calculate_monthly_payment(
                 current_loan_balance, current_rate, loan_term_years)
@@ -99,12 +102,10 @@ def rent_vs_buy_analysis(params):
 
         if move_to_larger_year > 0 and year >= move_to_larger_year and not moved_to_larger:
             moved_to_larger = True
-            # Calculate the rent at the time of the move and apply the multiplier
-            current_rent = (current_rent * (1 + rent_growth) **
-                            (month / 12)) * larger_rent_multiplier
-            # Reset rent growth from this new, higher base
+            new_rent_at_move_time = new_rent_today * \
+                (1 + rent_growth)**(month / 12)
             rent_growth_start_month = month
-            base_rent_after_move = current_rent
+            base_rent_after_move = new_rent_at_move_time
 
         if moved_to_larger:
             months_since_move = month - rent_growth_start_month
@@ -114,17 +115,24 @@ def rent_vs_buy_analysis(params):
             current_monthly_rent = current_rent * \
                 (1 + rent_growth)**(month / 12)
 
+        acc_rent += current_monthly_rent
+
         # --- Standard Monthly Calculations ---
         monthly_interest = current_loan_balance * (current_rate / 12)
         monthly_property_tax = (current_home_value * property_tax_rate) / 12
         monthly_insurance = (current_home_value * insurance_rate) / 12
 
         if current_loan_balance <= 0:
-            current_monthly_payment = 0
-            monthly_interest = 0
             monthly_principal = 0
+            monthly_interest = 0
+            current_monthly_payment = 0
         else:
             monthly_principal = current_monthly_payment - monthly_interest
+
+        acc_principal += monthly_principal
+        acc_interest += monthly_interest
+        acc_tax_ins += monthly_property_tax + monthly_insurance
+        acc_hoa += hoa_fees
 
         total_monthly_buy_cost = current_monthly_payment + \
             monthly_property_tax + monthly_insurance + hoa_fees
@@ -141,8 +149,26 @@ def rent_vs_buy_analysis(params):
 
         if month % 12 == 0:
             home_equity = current_home_value - current_loan_balance
-            buy_net_worth_yearly.append(home_equity + buy_investments)
+            buy_net_worth = home_equity + buy_investments
+            buy_net_worth_yearly.append(buy_net_worth)
             rent_net_worth_yearly.append(rent_investments)
+
+            yearly_details.append({
+                "year": year + 1,
+                "home_value": current_home_value,
+                "loan_balance": current_loan_balance,
+                "home_equity": home_equity,
+                "principal_paid": acc_principal,
+                "interest_paid": acc_interest,
+                "tax_ins_paid": acc_tax_ins,
+                "hoa_paid": acc_hoa,
+                "rent_paid": acc_rent,
+                "buy_net_worth": buy_net_worth,
+                "rent_net_worth": rent_investments
+            })
+
+            # Reset yearly accumulators
+            acc_principal = acc_interest = acc_tax_ins = acc_hoa = acc_rent = 0
 
     # --- 4. FINALIZE FOR RETURN ---
     return {
@@ -150,7 +176,6 @@ def rent_vs_buy_analysis(params):
         'buy_net_worth': buy_net_worth_yearly,
         'rent_net_worth': rent_net_worth_yearly,
         'final_buy_net_worth': buy_net_worth_yearly[-1],
-        'final_rent_net_worth': rent_net_worth_yearly[-1]
+        'final_rent_net_worth': rent_net_worth_yearly[-1],
+        'yearly_details': yearly_details
     }
-    # Run the analysis
-    results_df = rent_vs_buy_analysis(parameters)

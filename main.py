@@ -70,6 +70,10 @@ def rent_vs_buy_analysis(params):
                             current_loan_balance + buy_investments]
     rent_net_worth_yearly = [rent_investments]
 
+    # Property taxes are assessed once per year, let's  say
+    monthly_property_tax = (
+        home_price * property_tax_rate) / 12
+
     # Store some yearly summary data
     yearly_details = []
 
@@ -91,13 +95,14 @@ def rent_vs_buy_analysis(params):
             refinanced = True
             remaining_balance = calculate_remaining_balance(
                 initial_loan_amount, initial_rate, 30, month)
-            buy_investments -= refinance_costs
+
+            # assume you pay for refinancing out of home equity
+            remaining_balance += refinance_costs
             current_loan_balance = remaining_balance
             current_rate = refinance_rate
             loan_term_years = 30 - year
             current_monthly_payment = calculate_monthly_payment(
                 current_loan_balance, current_rate, loan_term_years)
-
         current_home_value = home_price * (1 + home_price_growth)**(month / 12)
 
         if move_to_larger_year > 0 and year >= move_to_larger_year and not moved_to_larger:
@@ -119,7 +124,6 @@ def rent_vs_buy_analysis(params):
 
         # --- Standard Monthly Calculations ---
         monthly_interest = current_loan_balance * (current_rate / 12)
-        monthly_property_tax = (current_home_value * property_tax_rate) / 12
         monthly_insurance = (current_home_value * insurance_rate) / 12
 
         if current_loan_balance <= 0:
@@ -148,6 +152,8 @@ def rent_vs_buy_analysis(params):
             buy_investments += abs(cost_difference)
 
         if month % 12 == 0:
+            monthly_property_tax = (
+                current_home_value * property_tax_rate) / 12
             home_equity = current_home_value - current_loan_balance
             buy_net_worth = home_equity + buy_investments
             buy_net_worth_yearly.append(buy_net_worth)

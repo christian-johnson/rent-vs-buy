@@ -30,7 +30,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
+
+
+      - name: Create virtual environment
+        run: |
+          uv venv
 
       - name: Install dependencies
         run: |
@@ -39,7 +44,7 @@ jobs:
       - name: Run Tests
         run: |
           # Runs pytest on the tests/ folder
-          uv run pytest tests/
+          uv run python -m pytest tests/
 
   build:
     name: Build Web App

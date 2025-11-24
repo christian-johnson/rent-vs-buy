@@ -1,10 +1,10 @@
 [project]
-name = "rent-buy"
+name = "rent-vs-buy-calculator-2"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "pandas>=2.3.2",
-    "pytest>=8.4.2",
+    "ipython>=9.7.0",
+    "numpy>=2.3.5",
 ]

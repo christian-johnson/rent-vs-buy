@@ -1,0 +1,5 @@
+{
+  "name": "Rent vs. Buy Calculator",
+  "description": "A sophisticated financial planning tool comparing the long-term net worth implications of renting versus buying a home, featuring refinancing options, rental upgrades, and stock market opportunity cost analysis.",
+  "requestFramePermissions": []
+}

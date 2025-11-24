@@ -108,34 +108,14 @@ def test_edge_case(baseline_params):
     params["rent_growth"] = 0.0
     params["closing_costs_pct"] = 0.0
 
-    # Ensure we pass 0 down payment amount if we want pure comparison,
-    # or keep it to test equity. Let's keep standard fixture down payment.
-    # Note: main.py has hardcoded selling_cost_pct = 0.06 (6%)
+    # For the edge case, assume rent & mortgage are the same
+    # So there's no excess cash flow to worry about
+    params["current_rent"] = 400000 / 360
 
     result = _run_analysis(params)
-
-    # The home value remains 500,000.
-    # The loan is paid off (remaining 0).
-    # Selling costs are 6% of 500,000 = 30,000.
-    # Expected Net Worth = 500,000 - 30,000 = 470,000.
-    expected_nw = 500000 * (1 - 0.06)
+    expected_nw = 500000
 
     assert result["final_buy_net_worth"] == approx(expected_nw, abs=1e-2)
-
-    # Note: The new main.py yearly_details does not output 'rent_paid' explicitly.
-    # We verify correct flow by ensuring rent net worth calculated correctly:
-    # Rent net worth should consist of the initial downpayment (100k) sitting in cash
-    # (0% growth) minus rent paid?
-    # Actually, logic is:
-    # 1. Rent NW starts with Downpayment (100k).
-    # 2. Cost Diff = Rent (1000) - Buy Cost (P&I only, since tax/ins/hoa/rate=0).
-    #    Buy Cost = 400k / 360 months = 1111.11
-    #    Diff = 1000 - 1111.11 = -111.11
-    #    Since Buy > Rent, Renter adds 0 to savings. Buyer adds 0 to savings.
-    #    The renter actually LOSES the difference? The current logic is:
-    #    buy_investments += max(0, diff); rent_investments += max(0, -diff)
-    #    So investments never decrease due to monthly flow, they just grow or stay flat.
-    #    Rent NW = 100k.
     assert result["final_rent_net_worth"] == approx(
         params["down_payment_amount"], abs=1e-2
     )
@@ -144,28 +124,24 @@ def test_edge_case(baseline_params):
 def test_refinancing_scenario(baseline_params):
     """Test that adding a beneficial refinance improves the buyer's outcome."""
     # Run baseline first
-    baseline_result = _run_analysis(baseline_params)
+
+    refi_params = baseline_params.copy()
+    # This only works properly for comparison
+    # if the buyer has extra cash flow, so the rent needs to be high enough
+    refi_params.update({"current_rent": 2500})
+    baseline_result = _run_analysis(refi_params)
 
     # Now run with refinancing
-    refi_params = baseline_params.copy()
     refi_params.update(
         {
             "refinance_year": 5,
-            "refinance_rate": 0.1,
-            "refinance_costs": 500,
+            "refinance_rate": 3.0,
+            "refinance_costs": 5000,
         }
     )
     refi_result = _run_analysis(refi_params)
-
     # A good refinance should increase the buyer's final net worth
     assert refi_result["final_buy_net_worth"] > baseline_result["final_buy_net_worth"]
-
-    # Rent net worth should be same or different?
-    # Renter net worth is affected by 'opportunity cost'.
-    # If mortgage drops, Buyer cost drops. Rent - Buy Diff increases.
-    # Buyer saves more. Renter logic is unaffected directly,
-    # UNLESS Rent < Buy initially.
-    assert refi_result["final_buy_net_worth"] != baseline_result["final_buy_net_worth"]
 
 
 def test_rental_upgrade_scenario(baseline_params):

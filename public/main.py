@@ -1,7 +1,6 @@
 import json
 import numpy as np
-from dataclasses import dataclass
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 
 # --- 1. Financial Math Module (Unit Testable) ---
 
@@ -86,7 +85,6 @@ def run_projection(
     ins_rate = float(params.get("insurance_rate", 0)) / 100
     hoa_monthly = float(params.get("hoa_fees", 0))
     closing_costs = home_price * (float(params.get("closing_costs_pct", 0)) / 100)
-    selling_cost_pct = 0.06
 
     # --- B. Generate Growth Factors (The Stochastic Part) ---
     stock_factors = generate_growth_matrices(
@@ -131,7 +129,7 @@ def run_projection(
             loan_amount, initial_rate, 30, refi_month
         )
         # New payment (resetting to 30 years is standard)
-        new_pmt = Financials.calculate_pmt(rem_bal, refi_rate, 30)
+        new_pmt = Financials.calculate_pmt(rem_bal, refi_rate, 30 - refi_year)
         monthly_payments[refi_month:] = new_pmt
 
     # 2. Rent Obligation Schedule (Base rent before growth/inflation)
@@ -221,7 +219,7 @@ def run_projection(
     # --- F. Final Net Worth Calculation ---
     home_equity = home_values - loan_balances
     # Net worth = Equity + Investments - Selling Costs
-    buy_net_worth = home_equity + buy_investments - (home_values * selling_cost_pct)
+    buy_net_worth = home_equity + buy_investments
     rent_net_worth = rent_investments
 
     return {

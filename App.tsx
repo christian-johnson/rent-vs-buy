@@ -516,7 +516,7 @@ export default function App() {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="md:col-span-3 bg-paper dark:bg-darkPaper rounded-xl shadow-sm border border-stone-200 dark:border-gray-700 p-8 text-center">
-                        <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-6">Net Worth After 30 Years (Median)</h2>
+                        <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-6">Net Worth After 30 Years (Baseline Scenario)</h2>
                         <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16">
                             <div className="flex flex-col items-center">
                                 <p className="text-sm font-medium text-gray-500 mb-1">Buying Scenario</p>
@@ -536,7 +536,7 @@ export default function App() {
                         {/* Monte Carlo Results */}
                         <div className="mt-8 flex flex-col items-center gap-4">
                             <div className="inline-block bg-white dark:bg-gray-800/50 px-6 py-3 rounded-full border border-gray-100 dark:border-gray-700 shadow-sm">
-                                <span className="text-gray-600 dark:text-gray-300">Median Advantage: </span>
+                                <span className="text-gray-600 dark:text-gray-300">Advantage: </span>
                                 <span className={`font-bold text-lg ${result.final_buy_net_worth > result.final_rent_net_worth ? 'text-buy' : 'text-rent'}`}>
                                     {result.final_buy_net_worth > result.final_rent_net_worth ? 'Buying' : 'Renting'}
                                 </span>

@@ -31,8 +31,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-white dark:bg-gray-800 p-4 border border-gray-200 dark:border-gray-700 rounded shadow-lg text-sm">
         <p className="font-bold mb-2">{label > 0 ? `Year ${label}` : 'Start'}</p>
-        <p className="text-buy font-semibold">Buy Median: ${Math.round(buyVal).toLocaleString()}</p>
-        <p className="text-rent font-semibold">Rent Median: ${Math.round(rentVal).toLocaleString()}</p>
+        <p className="text-buy font-semibold">Buy (baseline): ${Math.round(buyVal).toLocaleString()}</p>
+        <p className="text-rent font-semibold">Rent (baseline): ${Math.round(rentVal).toLocaleString()}</p>
         <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
             <span className={diff > 0 ? "text-buy" : "text-rent"}>
                 {diff > 0 ? "Buying" : "Renting"} ahead by ${Math.abs(Math.round(diff)).toLocaleString()}

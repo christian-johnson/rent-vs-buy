@@ -43,7 +43,6 @@ jobs:
 
       - name: Run Tests
         run: |
-          # Runs pytest on the tests/ folder
           uv run python -m pytest tests/
 
   build:

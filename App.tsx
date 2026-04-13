@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Moon, Sun, Plus, Trash2, Info, Github, X, HelpCircle, Minus, Activity } from 'lucide-react';
+import { Moon, Sun, Plus, Trash2, Info, Github, X, HelpCircle, Minus, Activity, Settings } from 'lucide-react';
 import { DEFAULT_PARAMS } from './constants';
 import { AnalysisParams, AnalysisResult } from './types';
 import { initPyodide, runAnalysis } from './services/pyodideService';
 import { AnalysisChart } from './components/AnalysisChart';
 
 const noSpinnerStyle = `
-  input[type=number]::-webkit-inner-spin-button, 
-  input[type=number]::-webkit-outer-spin-button { 
-    -webkit-appearance: none; 
-    margin: 0; 
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
   input[type=number] {
     -moz-appearance: textfield;
@@ -57,33 +57,28 @@ const SmartInput: React.FC<SmartInputProps> = ({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  
-  // We need a ref to track the current value inside the setInterval closure
-  // otherwise the interval will always use the stale value from when the click started
+
   const valueRef = useRef(value);
 
   useEffect(() => {
     valueRef.current = value;
   }, [value]);
 
-  // Clean up timers on unmount
   useEffect(() => {
     return () => stopContinuousChange();
   }, []);
 
   const handleStep = (direction: 1 | -1) => {
     if (disabled) return;
-    
-    // Use valueRef.current to get the latest value inside intervals
+
     const currentVal = valueRef.current;
-    
+
     const stepString = step.toString();
     const precision = stepString.includes('.') ? stepString.split('.')[1].length : 0;
-    
+
     let nextVal = currentVal + step * direction;
     nextVal = parseFloat(nextVal.toFixed(precision));
 
-    // Bounds checking
     if (min !== undefined && nextVal < min) nextVal = min;
     if (max !== undefined && nextVal > max) nextVal = max;
 
@@ -93,12 +88,11 @@ const SmartInput: React.FC<SmartInputProps> = ({
   const startContinuousChange = (direction: 1 | -1) => {
     if (disabled) return;
     handleStep(direction);
-    // Initial delay before rapid fire
     timeoutRef.current = setTimeout(() => {
       intervalRef.current = setInterval(() => {
         handleStep(direction);
-      }, 80); // Speed of rapid fire
-    }, 400); // Delay before rapid fire starts
+      }, 80);
+    }, 400);
   };
 
   const stopContinuousChange = () => {
@@ -106,13 +100,11 @@ const SmartInput: React.FC<SmartInputProps> = ({
     if (intervalRef.current) clearInterval(intervalRef.current);
   };
 
-  // Handle direct typing
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    
-    // Allow empty string for better typing UX, but don't fire onChange with it
+
     if (inputValue === '') {
-      onChange(name, 0); // Or handle empty state differently depending on requirements
+      onChange(name, 0);
       return;
     }
 
@@ -125,9 +117,8 @@ const SmartInput: React.FC<SmartInputProps> = ({
   return (
     <div className="w-full max-w-md mx-auto px-0 py-0.5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-1">
-        
-        {/* Label Section */}
-        <label 
+
+        <label
           htmlFor={`input-${name as string}`}
           className="text-sm font-semibold text-gray-700 dark:text-gray-200 select-none cursor-pointer"
         >
@@ -135,17 +126,15 @@ const SmartInput: React.FC<SmartInputProps> = ({
         </label>
 
         <div className="flex flex-col items-end gap-1">
-          {/* Main Control Wrapper */}
-          <div 
+          <div
             className={`
-              relative flex items-center bg-white dark:bg-gray-800 
-              border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm 
+              relative flex items-center bg-white dark:bg-gray-800
+              border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm
               transition-all duration-200 overflow-hidden w-[200px] h-10
               ${disabled ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-900' : 'hover:border-gray-400 dark:hover:border-gray-500 focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-500'}
             `}
           >
-            
-            {/* Decrease Button */}
+
             <button
               type="button"
               disabled={disabled}
@@ -156,7 +145,7 @@ const SmartInput: React.FC<SmartInputProps> = ({
               onTouchEnd={stopContinuousChange}
               className="
                 group flex items-center justify-center w-10 h-full
-                bg-gray-50 dark:bg-gray-700/50 border-r border-gray-200 dark:border-gray-700 
+                bg-gray-50 dark:bg-gray-700/50 border-r border-gray-200 dark:border-gray-700
                 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500
                 focus:outline-none focus:bg-gray-200 transition-colors cursor-pointer
               "
@@ -165,18 +154,16 @@ const SmartInput: React.FC<SmartInputProps> = ({
               <Minus size={16} className="text-gray-500 group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200 transition-colors" strokeWidth={2.5} />
             </button>
 
-            {/* Input Area */}
-            <div 
+            <div
               className="flex-1 flex items-center justify-center relative px-2 h-full cursor-text"
               onClick={() => inputRef.current?.focus()}
             >
-              {/* Prefix */}
               {prefix && (
                 <span className="text-gray-400 dark:text-gray-500 text-sm font-medium select-none pointer-events-none mr-1">
                   {prefix}
                 </span>
               )}
-              
+
               <input
                 ref={inputRef}
                 id={`input-${name as string}`}
@@ -193,7 +180,6 @@ const SmartInput: React.FC<SmartInputProps> = ({
                 "
               />
 
-              {/* Suffix */}
               {suffix && (
                 <span className="text-gray-400 dark:text-gray-500 text-sm font-medium select-none pointer-events-none ml-1">
                   {suffix}
@@ -201,7 +187,6 @@ const SmartInput: React.FC<SmartInputProps> = ({
               )}
             </div>
 
-            {/* Increase Button */}
             <button
               type="button"
               disabled={disabled}
@@ -212,7 +197,7 @@ const SmartInput: React.FC<SmartInputProps> = ({
               onTouchEnd={stopContinuousChange}
               className="
                 group flex items-center justify-center w-10 h-full
-                bg-gray-50 dark:bg-gray-700/50 border-l border-gray-200 dark:border-gray-700 
+                bg-gray-50 dark:bg-gray-700/50 border-l border-gray-200 dark:border-gray-700
                 hover:bg-gray-100 dark:hover:bg-gray-600 active:bg-gray-200 dark:active:bg-gray-500
                 focus:outline-none focus:bg-gray-200 transition-colors cursor-pointer
               "
@@ -222,7 +207,6 @@ const SmartInput: React.FC<SmartInputProps> = ({
             </button>
           </div>
 
-          {/* Helper Text */}
           {helperText && (
             <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium tracking-wide">
               {helperText}
@@ -271,10 +255,9 @@ export default function App() {
   const [showRefinance, setShowRefinance] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  
+
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  // Toggle Dark Mode
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -283,7 +266,6 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Initialize Pyodide
   useEffect(() => {
     initPyodide()
       .then(() => {
@@ -304,10 +286,10 @@ export default function App() {
       const currentParams = { ...params };
       if (!showRefinance) currentParams.refinance_year = 0;
       if (!showUpgrade) currentParams.move_to_larger_year = 0;
-      
+
       const res = await runAnalysis(currentParams);
       setResult(res);
-      
+
       if (shouldScroll) {
         setTimeout(() => {
           resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -334,23 +316,23 @@ export default function App() {
             <h1 className="text-2xl font-bold font-serif text-primary dark:text-white tracking-tight hidden sm:block">Rent vs. Buy</h1>
         </div>
         <div className="flex items-center gap-2">
-           <button 
+           <button
             onClick={() => setIsAboutOpen(true)}
             className="px-3 py-2 text-sm font-medium text-primary dark:text-gray-200 hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-colors flex items-center gap-2"
           >
             <HelpCircle size={18} /> <span className="hidden sm:inline">About</span>
           </button>
           <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1"></div>
-          <a 
-            href="https://github.com/christian-johnson/rent-vs-buy" 
-            target="_blank" 
+          <a
+            href="https://github.com/christian-johnson/rent-vs-buy"
+            target="_blank"
             rel="noopener noreferrer"
             className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-primary dark:text-gray-200"
             aria-label="GitHub Repository"
           >
             <Github className="w-5 h-5" />
           </a>
-          <button 
+          <button
             onClick={() => setDarkMode(!darkMode)}
             className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
             aria-label="Toggle Dark Mode"
@@ -361,7 +343,6 @@ export default function App() {
       </nav>
 
       <main className="max-w-6xl mx-auto px-4 mt-8">
-        {/* Header Title Section */}
         <div className="text-center mb-10 max-w-3xl mx-auto">
             <h2 className="text-4xl font-serif font-bold text-primary dark:text-white mb-4">
                 Rent vs. Buy Simulator
@@ -378,51 +359,86 @@ export default function App() {
             </div>
         ) : (
           <div className="flex flex-col gap-8">
-            {/* Top Section: Form */}
             <div>
               <form onSubmit={(e) => { e.preventDefault(); handleRunAnalysis(); }}>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Property & Loan Column */}
-                    <Section title="Property & Loan" description="Purchase details and financing.">
-                        <SmartInput label="Home Price" name="home_price" value={params.home_price} onChange={handleChange} prefix="$" step={1000} />
-                        <SmartInput 
-                            label="Down Payment" 
-                            name="down_payment_amount" 
-                            value={params.down_payment_amount} 
-                            onChange={handleChange} 
-                            prefix="$"
-                            step={1000}
-                            helperText={`${getDownPaymentPercent()}% of price`} 
-                        />
-                        <SmartInput label="Interest Rate" name="initial_rate" value={params.initial_rate} onChange={handleChange} suffix="%" step={0.1} />
-                        <SmartInput label="Closing Costs" name="closing_costs_pct" value={params.closing_costs_pct} onChange={handleChange} suffix="%" step={0.1} />
-                        <SmartInput label="HOA Fees" name="hoa_fees" value={params.hoa_fees} onChange={handleChange} prefix="$" suffix="/mo" step={10} />
-                    </Section>
 
-                    {/* Market Assumptions Column */}
-                    <Section title="Market Assumptions" description="Growth projections and costs.">
-                        <SmartInput label="Current Rent" name="current_rent" value={params.current_rent} onChange={handleChange} prefix="$" suffix="/mo" step={50} />
-                        <SmartInput label="Home Growth" name="home_price_growth" value={params.home_price_growth} onChange={handleChange} suffix="%" step={0.1} />
-                        <SmartInput label="Rent Growth" name="rent_growth" value={params.rent_growth} onChange={handleChange} suffix="%" step={0.1} />
-                        <SmartInput label="Stock Growth" name="stock_growth" value={params.stock_growth} onChange={handleChange} suffix="%" step={0.1} />
-                        <SmartInput label="Property Tax" name="property_tax_rate" value={params.property_tax_rate} onChange={handleChange} suffix="%" step={0.1} />
-                        <SmartInput label="Insurance" name="insurance_rate" value={params.insurance_rate} onChange={handleChange} suffix="%" step={0.1} />
-                    </Section>
+                {/* Primary inputs */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <Section title="Property & Loan" description="Purchase details and financing.">
+                    <SmartInput label="Home Price" name="home_price" value={params.home_price} onChange={handleChange} prefix="$" step={1000} />
+                    <SmartInput
+                      label="Down Payment"
+                      name="down_payment_amount"
+                      value={params.down_payment_amount}
+                      onChange={handleChange}
+                      prefix="$"
+                      step={1000}
+                      helperText={`${getDownPaymentPercent()}% of price`}
+                    />
+                    <SmartInput label="Interest Rate" name="initial_rate" value={params.initial_rate} onChange={handleChange} suffix="%" step={0.1} />
+                    <SmartInput label="Property Tax" name="property_tax_rate" value={params.property_tax_rate} onChange={handleChange} suffix="%" step={0.1} helperText="Annual % of home value" />
+                  </Section>
+
+                  <Section title="Market & Renting" description="Growth projections and current rent.">
+                    <SmartInput label="Current Rent" name="current_rent" value={params.current_rent} onChange={handleChange} prefix="$" suffix="/mo" step={50} />
+                    <SmartInput label="Home Appreciation" name="home_price_growth" value={params.home_price_growth} onChange={handleChange} suffix="%" step={0.1} helperText="Annual" />
+                    <SmartInput label="Stock Market Return" name="stock_growth" value={params.stock_growth} onChange={handleChange} suffix="%" step={0.1} helperText="Annual" />
+                  </Section>
+                </div>
+
+                {/* Advanced Settings */}
+                <div className="mt-4">
+                  <details className="group bg-paper dark:bg-darkPaper rounded-lg border border-stone-200 dark:border-gray-700">
+                    <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors select-none">
+                      <div className="flex items-center gap-3">
+                        <Settings className="text-primary dark:text-gray-200" size={20} />
+                        <div>
+                          <h3 className="font-serif text-lg font-bold text-primary dark:text-white">Advanced Settings</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Costs, taxes, and other assumptions. Defaults are reasonable for most scenarios.</p>
+                        </div>
+                      </div>
+                      <span className="text-2xl text-gray-400 group-open:rotate-180 transition-transform">⌄</span>
+                    </summary>
+                    <div className="p-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+
+                        {/* Column 1: Ongoing costs */}
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Ongoing Costs</p>
+                          <SmartInput label="Closing Costs" name="closing_costs_pct" value={params.closing_costs_pct} onChange={handleChange} suffix="%" step={0.1} helperText="% of purchase price" />
+                          <SmartInput label="HOA Fees" name="hoa_fees" value={params.hoa_fees} onChange={handleChange} prefix="$" suffix="/mo" step={10} />
+                          <SmartInput label="Home Insurance" name="insurance_rate" value={params.insurance_rate} onChange={handleChange} suffix="%" step={0.1} helperText="Annual % of home value" />
+                          <SmartInput label="Maintenance" name="maintenance_rate" value={params.maintenance_rate} onChange={handleChange} suffix="%" step={0.1} helperText="Annual % of home value" />
+                          <SmartInput label="Selling Costs" name="selling_costs_pct" value={params.selling_costs_pct} onChange={handleChange} suffix="%" step={0.1} helperText="Realtor fees + closing at sale" />
+                          <SmartInput label="Rent Growth" name="rent_growth" value={params.rent_growth} onChange={handleChange} suffix="%" step={0.1} helperText="Annual" />
+                        </div>
+
+                        {/* Column 2: Taxes */}
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Taxes</p>
+                          <SmartInput label="Tax Bracket" name="federal_tax_bracket" value={params.federal_tax_bracket} onChange={handleChange} suffix="%" step={1} helperText="Federal marginal rate" />
+                          <SmartInput label="Standard Deduction" name="standard_deduction" value={params.standard_deduction} onChange={handleChange} prefix="$" step={500} helperText="2024: $29,200 (married)" />
+                          <SmartInput label="Capital Gains Rate" name="capital_gains_rate" value={params.capital_gains_rate} onChange={handleChange} suffix="%" step={1} helperText="Long-term rate on investments" />
+                          <SmartInput label="Home CGT Exclusion" name="home_cg_exclusion" value={params.home_cg_exclusion} onChange={handleChange} prefix="$" step={10000} helperText="$500k married, $250k single" />
+                        </div>
+                      </div>
+                    </div>
+                  </details>
                 </div>
 
                 {/* Optional Scenarios */}
                 <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {showRefinance && (
                     <div className="relative group animate-in fade-in slide-in-from-top-4 duration-300">
-                        <button 
+                        <button
                             type="button"
-                            onClick={() => setShowRefinance(false)} 
+                            onClick={() => setShowRefinance(false)}
                             className="absolute top-6 right-6 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 rounded-full transition-colors z-10"
                             title="Remove Refinancing"
                         >
                             <Trash2 size={18} />
                         </button>
-                        <Section title="Refinancing" description="Simulate a future rate drop.">
+                        <Section title="Refinancing" description="Simulate a future rate drop. Amortizes over the remaining term.">
                             <SmartInput label="Year to Refinance" name="refinance_year" value={params.refinance_year || 5} onChange={handleChange} suffix="yrs" />
                             <SmartInput label="New Rate" name="refinance_rate" value={params.refinance_rate || 5.0} onChange={handleChange} suffix="%" step={0.1} />
                             <SmartInput label="Refinance Cost" name="refinance_costs" value={params.refinance_costs || 3000} onChange={handleChange} prefix="$" step={500} />
@@ -432,9 +448,9 @@ export default function App() {
 
                     {showUpgrade && (
                         <div className="relative group animate-in fade-in slide-in-from-top-4 duration-300">
-                        <button 
+                        <button
                             type="button"
-                            onClick={() => setShowUpgrade(false)} 
+                            onClick={() => setShowUpgrade(false)}
                             className="absolute top-6 right-6 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1.5 rounded-full transition-colors z-10"
                             title="Remove Upgrade"
                         >
@@ -448,7 +464,7 @@ export default function App() {
                     )}
                 </div>
 
-                {/* Simulation Parameters (Collapsed) */}
+                {/* Simulation Uncertainty */}
                 <div className="mt-4">
                     <details className="group bg-paper dark:bg-darkPaper rounded-lg border border-stone-200 dark:border-gray-700">
                         <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors select-none">
@@ -456,16 +472,16 @@ export default function App() {
                                 <Activity className="text-primary dark:text-gray-200" size={20} />
                                 <div>
                                     <h3 className="font-serif text-lg font-bold text-primary dark:text-white">Simulation Uncertainty</h3>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Adjust the volatility of markets for Monte Carlo simulation.</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Adjust market volatility for the Monte Carlo simulation.</p>
                                 </div>
                             </div>
                             <span className="text-2xl text-gray-400 group-open:rotate-180 transition-transform">⌄</span>
                         </summary>
                         <div className="p-4 pt-0 border-t border-gray-100 dark:border-gray-700 mt-2">
                              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-2">
-                                <SmartInput label="Stock Volatility" name="stock_volatility" value={params.stock_volatility} onChange={handleChange} suffix="%" step={0.5} helperText="Std. Deviation" />
-                                <SmartInput label="Home Volatility" name="home_volatility" value={params.home_volatility} onChange={handleChange} suffix="%" step={0.5} helperText="Std. Deviation" />
-                                <SmartInput label="Rent Volatility" name="rent_volatility" value={params.rent_volatility} onChange={handleChange} suffix="%" step={0.5} helperText="Std. Deviation" />
+                                <SmartInput label="Stock Volatility" name="stock_volatility" value={params.stock_volatility} onChange={handleChange} suffix="%" step={0.5} helperText="Annual std. deviation" />
+                                <SmartInput label="Home Volatility" name="home_volatility" value={params.home_volatility} onChange={handleChange} suffix="%" step={0.5} helperText="Annual std. deviation" />
+                                <SmartInput label="Rent Volatility" name="rent_volatility" value={params.rent_volatility} onChange={handleChange} suffix="%" step={0.5} helperText="Annual std. deviation" />
                              </div>
                         </div>
                     </details>
@@ -510,13 +526,13 @@ export default function App() {
               </form>
             </div>
 
-            {/* Bottom Section: Results */}
+            {/* Results */}
             <div className="scroll-mt-24 space-y-8 border-t-2 border-stone-200 dark:border-gray-700 pt-10" ref={resultsRef}>
               {result && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="md:col-span-3 bg-paper dark:bg-darkPaper rounded-xl shadow-sm border border-stone-200 dark:border-gray-700 p-8 text-center">
-                        <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-6">Net Worth After 30 Years (Baseline Scenario)</h2>
+                        <h2 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-6">After-Tax Net Worth After 30 Years (Baseline Scenario)</h2>
                         <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16">
                             <div className="flex flex-col items-center">
                                 <p className="text-sm font-medium text-gray-500 mb-1">Buying Scenario</p>
@@ -533,7 +549,6 @@ export default function App() {
                             </div>
                         </div>
 
-                        {/* Monte Carlo Results */}
                         <div className="mt-8 flex flex-col items-center gap-4">
                             <div className="inline-block bg-white dark:bg-gray-800/50 px-6 py-3 rounded-full border border-gray-100 dark:border-gray-700 shadow-sm">
                                 <span className="text-gray-600 dark:text-gray-300">Advantage: </span>
@@ -547,11 +562,11 @@ export default function App() {
                             </div>
 
                             <div className="text-sm md:text-base font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg">
-                                Based on 2,000 simulations, 
+                                Based on 2,000 simulations,
                                 <span className={result.buy_wins_pct > 50 ? "text-buy font-bold mx-1" : "text-rent font-bold mx-1"}>
                                     {result.buy_wins_pct > 50 ? "Buying" : "Renting"}
                                 </span>
-                                wins in 
+                                wins in
                                 <span className="font-bold text-primary dark:text-white mx-1">
                                     {result.buy_wins_pct > 50 ? result.buy_wins_pct.toFixed(1) : result.rent_wins_pct.toFixed(1)}%
                                 </span>
@@ -563,7 +578,7 @@ export default function App() {
 
                   <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 min-h-[450px]">
                     <div className="flex justify-between items-center mb-6 px-2">
-                        <h3 className="text-lg font-bold text-primary dark:text-white">Equity Projection (with 68% Confidence)</h3>
+                        <h3 className="text-lg font-bold text-primary dark:text-white">After-Tax Net Worth Projection (with 68% Confidence)</h3>
                     </div>
                     <AnalysisChart data={result} />
                   </div>
@@ -622,31 +637,40 @@ export default function App() {
       {/* About Modal */}
       <Modal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} title="About & FAQ">
         <FaqItem question="How does this calculator work?">
-          <p>This tool compares the long-term financial outcomes of buying a home versus renting. It projects your net worth over 30 years in both scenarios by considering factors like home appreciation, rent increases, and investments.</p>
+          <p>This tool compares the long-term financial outcomes of buying a home versus renting. It projects your after-tax, after-sale-costs net worth over 30 years in both scenarios, accounting for home appreciation, rent increases, stock investments, taxes, and selling costs.</p>
+        </FaqItem>
+
+        <FaqItem question="What costs are modeled for buyers?">
+          <p>The buying scenario includes: mortgage payments (principal + interest), property taxes, home insurance, HOA fees, maintenance costs, and closing costs at purchase. At each year's snapshot, selling costs (realtor fees etc.) and capital gains tax on home appreciation above the exclusion are also deducted.</p>
+          <p className="mt-2">The mortgage interest deduction is modeled: if your annualized interest + property tax exceeds the standard deduction, the marginal tax savings reduce your effective monthly cost.</p>
         </FaqItem>
 
         <FaqItem question="What is the Simulation Uncertainty feature?">
-          <p>Standard calculators assume a fixed growth rate (e.g., 8% every single year). In reality, markets fluctuate. We run 2,000 scenarios using the volatilities you provide to generate a 'cloud' of possibilities. The shaded areas on the chart represent the likely range of outcomes (68% confidence interval).</p>
+          <p>Standard calculators assume a fixed growth rate every single year. In reality, markets fluctuate. We run 2,000 scenarios using lognormal returns (geometric Brownian motion), ensuring growth factors are always positive and the expected annual return matches your input. The shaded areas represent the 68% confidence interval (16th–84th percentile).</p>
         </FaqItem>
 
-        <FaqItem question="I increased my rent - and my buying equity increased. What gives?">
-          <p>The calculator invests any difference in the monthly payments between renting and buying into the stock market. So, if your rent is $1500 per month, and your total mortgage/insurance/taxes are $2000 per month, the rental scenario invests $500 per month into stocks.</p>
-          <p className="mt-2">If you increase your rent to $2500 per month, that extra $500 now is invested in the buying scenario instead (the idea being, you indicated that you are able to afford a total $2500 per month outlay).</p>
+        <FaqItem question="I increased my rent — and my buying equity increased. What gives?">
+          <p>The calculator invests any monthly surplus between renting and buying into the stock market. If your rent is $2,000/mo and your mortgage + costs are $2,500/mo, the renter invests $500/mo.</p>
+          <p className="mt-2">If you raise rent to $3,000/mo, the buyer now has a $500/mo surplus to invest instead. This reflects the implicit assumption that you can afford the higher amount either way.</p>
         </FaqItem>
 
-        <FaqItem question="How does this differ from the New York Times calculator?">
-           <p>This one is better in some ways and worse in others. The main feature here is the ability to add refinancing and moves to a more expensive apartment, instead of a single point-in-time comparison.</p>
-           <p className="mt-2">However, this calculator is missing some other (perhaps minor) components, such as taking into account the mortgage interest tax deduction that the New York Times calculator does.</p>
+        <FaqItem question="How are taxes handled?">
+          <p><strong>Mortgage interest deduction:</strong> If your itemized deductions (annualized interest + property tax, SALT-capped at $10k) exceed your standard deduction, the excess saves you taxes at your marginal rate each month.</p>
+          <p className="mt-2"><strong>Capital gains on investments:</strong> Both the buyer's and renter's investment portfolios are taxed on gains (portfolio value minus cost basis) at the long-term capital gains rate when you take each year's snapshot.</p>
+          <p className="mt-2"><strong>Capital gains on home sale:</strong> Gains above the primary residence exclusion ($500k married, $250k single) are taxed at the capital gains rate. Selling costs (realtor fees, closing costs) are also deducted.</p>
         </FaqItem>
 
         <FaqItem question="What about inflation?">
-            <p>This calculator uses current dollars for everything - no assumptions are made about inflation. So the returns from the stock market and home price/rental price growth should use pre-inflation numbers.</p> 
-            <p className="mt-2">For instance, you might typically assume that the stock market averages a real return of 7%, with average inflation 3% and 10% average unadjusted returns. For this calculator, you should use the 10% returns as your assumption, and then interpret the outputs in current dollars.</p>
+            <p>This calculator uses nominal (current) dollars throughout. Returns from stocks, home prices, and rent should use nominal (not inflation-adjusted) numbers. For example, if you expect 7% real stock returns and 3% inflation, use 10% as your stock growth input.</p>
         </FaqItem>
-        
+
+        <FaqItem question="How does refinancing work?">
+          <p>Refinancing recalculates the monthly payment on the remaining loan balance at the new rate, amortized over the remaining term (not a fresh 30 years). The one-time refinancing cost is deducted from the buyer's investment account at the time of refinancing.</p>
+        </FaqItem>
+
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
            <p className="text-sm text-gray-500 dark:text-gray-400">
-             I think there's a bug, or I'd like to contribute to this calculator? 
+             Found a bug or want to contribute?
              <a href="https://github.com/christian-johnson/rent-vs-buy" className="text-buy hover:underline ml-1">
                 Head to the GitHub repo.
              </a>
